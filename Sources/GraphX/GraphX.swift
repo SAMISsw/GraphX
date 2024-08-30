@@ -53,7 +53,7 @@ public class GraphView: UIView {
     public var graphType: GraphType
     public var layout: GraphLayout
     public var animationStyle: UIView.AnimationOptions
-    public var backgroundColor: UIColor
+    public var graphBackgroundColor: UIColor
     public var graphColor: UIColor
     public var showLegend: Bool
     public var showLabels: Bool
@@ -77,12 +77,12 @@ public class GraphView: UIView {
     public var animationDuration: TimeInterval
     public var showDataLabels: Bool
     
-    public init(frame: CGRect, data: GraphData, graphType: GraphType = .bar, layout: GraphLayout = GraphLayout(), animationStyle: UIView.AnimationOptions = .transitionCrossDissolve, backgroundColor: UIColor = .white, graphColor: UIColor = .blue, showLegend: Bool = true, showLabels: Bool = true, showGrid: Bool = false, title: String? = nil, showXAxisLabels: Bool = true, showYAxisLabels: Bool = true, showTooltips: Bool = true, highlightOnTouch: Bool = true, animateOnLoad: Bool = true, showLegendTitle: Bool = false, legendTitle: String? = nil, tooltipBackgroundColor: UIColor = .black, legendPosition: CGPoint = CGPoint(x: 0, y: 0), axisLineWidth: CGFloat = 1, axisLineColor: UIColor = .black, enableZoom: Bool = false, borderColor: UIColor = .clear, borderWidth: CGFloat = 0, gradientColors: [UIColor]? = nil, animationDuration: TimeInterval = 1.0, showDataLabels: Bool = true) {
+    public init(frame: CGRect, data: GraphData, graphType: GraphType = .bar, layout: GraphLayout = GraphLayout(), animationStyle: UIView.AnimationOptions = .transitionCrossDissolve, graphBackgroundColor: UIColor = .white, graphColor: UIColor = .blue, showLegend: Bool = true, showLabels: Bool = true, showGrid: Bool = false, title: String? = nil, showXAxisLabels: Bool = true, showYAxisLabels: Bool = true, showTooltips: Bool = true, highlightOnTouch: Bool = true, animateOnLoad: Bool = true, showLegendTitle: Bool = false, legendTitle: String? = nil, tooltipBackgroundColor: UIColor = .black, legendPosition: CGPoint = CGPoint(x: 0, y: 0), axisLineWidth: CGFloat = 1, axisLineColor: UIColor = .black, enableZoom: Bool = false, borderColor: UIColor = .clear, borderWidth: CGFloat = 0, gradientColors: [UIColor]? = nil, animationDuration: TimeInterval = 1.0, showDataLabels: Bool = true) {
         self.data = data
         self.graphType = graphType
         self.layout = layout
         self.animationStyle = animationStyle
-        self.backgroundColor = backgroundColor
+        self.graphBackgroundColor = graphBackgroundColor
         self.graphColor = graphColor
         self.showLegend = showLegend
         self.showLabels = showLabels
@@ -114,7 +114,7 @@ public class GraphView: UIView {
     }
     
     private func setupView() {
-        self.backgroundColor = backgroundColor
+        self.backgroundColor = graphBackgroundColor
         self.layer.borderColor = borderColor.cgColor
         self.layer.borderWidth = borderWidth
         if animateOnLoad {
@@ -202,27 +202,28 @@ public class GraphView: UIView {
                 tooltip.alpha = 0
                 self.addSubview(tooltip)
                 
-                bar.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showTooltip(_:))))
-                
-                if highlightOnTouch {
-                    bar.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(highlightBar(_:))))
-                }
+                bar.tag = index
+                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(showTooltip(_:)))
+                bar.addGestureRecognizer(tapGesture)
             }
-            
-            UIView.animate(withDuration: animationDuration, delay: 0, options: animationStyle, animations: {
-                bar.alpha = 1
-            }, completion: nil)
+        }
+    }
+    
+    @objc private func showTooltip(_ sender: UITapGestureRecognizer) {
+        guard let bar = sender.view else { return }
+        if let tooltip = self.subviews.filter({ $0 is UILabel && $0.tag == bar.tag }).first {
+            tooltip.alpha = 1
         }
     }
     
     private func drawLineGraph() {
-        let path = UIBezierPath()
+        let maxHeight = self.bounds.height - layout.margin * 2
         let maxValue = data.values.max() ?? 1
-        let stepWidth = (self.bounds.width - layout.margin * 2) / CGFloat(data.values.count - 1)
+        let path = UIBezierPath()
         
         for (index, value) in data.values.enumerated() {
-            let x = layout.margin + CGFloat(index) * stepWidth
-            let y = self.bounds.height - (CGFloat(value) / CGFloat(maxValue) * (self.bounds.height - layout.margin * 2)) - layout.margin
+            let x = layout.margin + CGFloat(index) * (self.bounds.width - layout.margin * 2) / CGFloat(data.values.count - 1)
+            let y = self.bounds.height - CGFloat(value) / CGFloat(maxValue) * maxHeight - layout.margin
             if index == 0 {
                 path.move(to: CGPoint(x: x, y: y))
             } else {
@@ -230,17 +231,17 @@ public class GraphView: UIView {
             }
         }
         
-        let shapeLayer = CAShapeLayer()
-        shapeLayer.path = path.cgPath
-        shapeLayer.strokeColor = graphColor.cgColor
-        shapeLayer.lineWidth = 2
-        shapeLayer.fillColor = UIColor.clear.cgColor
-        self.layer.addSublayer(shapeLayer)
+        let lineLayer = CAShapeLayer()
+        lineLayer.path = path.cgPath
+        lineLayer.strokeColor = graphColor.cgColor
+        lineLayer.fillColor = nil
+        lineLayer.lineWidth = 2
+        self.layer.addSublayer(lineLayer)
         
         if showDataLabels {
             for (index, value) in data.values.enumerated() {
-                let x = layout.margin + CGFloat(index) * stepWidth
-                let y = self.bounds.height - (CGFloat(value) / CGFloat(maxValue) * (self.bounds.height - layout.margin * 2)) - layout.margin
+                let x = layout.margin + CGFloat(index) * (self.bounds.width - layout.margin * 2) / CGFloat(data.values.count - 1)
+                let y = self.bounds.height - CGFloat(value) / CGFloat(maxValue) * maxHeight - layout.margin
                 
                 let label = UILabel(frame: CGRect(x: x - 20, y: y - 20, width: 40, height: 20))
                 label.text = String(format: "%.1f", value)
@@ -250,58 +251,28 @@ public class GraphView: UIView {
                 self.addSubview(label)
             }
         }
-        
-        if showTooltips {
-            for (index, value) in data.values.enumerated() {
-                let x = layout.margin + CGFloat(index) * stepWidth
-                let y = self.bounds.height - (CGFloat(value) / CGFloat(maxValue) * (self.bounds.height - layout.margin * 2)) - layout.margin
-                
-                let tooltip = UILabel(frame: CGRect(x: x - 20, y: y - 40, width: 40, height: 20))
-                tooltip.text = String(format: "%.1f", value)
-                tooltip.textColor = .white
-                tooltip.backgroundColor = tooltipBackgroundColor
-                tooltip.textAlignment = .center
-                tooltip.font = layout.axisLabelFont
-                tooltip.alpha = 0
-                self.addSubview(tooltip)
-                
-                let point = CGPoint(x: x, y: y)
-                let tapGesture = UITapGestureRecognizer(target: self, action: #selector(showTooltip(_:)))
-                self.addGestureRecognizer(tapGesture)
-                
-                if highlightOnTouch {
-                    self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(highlightLine(_:))))
-                }
-            }
-        }
-        
-        UIView.animate(withDuration: animationDuration, delay: 0, options: animationStyle, animations: {
-            self.layer.opacity = 1
-        }, completion: nil)
     }
     
     private func drawPieChart() {
         let total = data.values.reduce(0, +)
-        var startAngle: CGFloat = 0
+        var startAngle: CGFloat = -.pi / 2
+        let center = CGPoint(x: self.bounds.width / 2, y: self.bounds.height / 2)
+        let radius = min(self.bounds.width, self.bounds.height) / 2 - layout.margin
         
         for (index, value) in data.values.enumerated() {
-            let endAngle = startAngle + (CGFloat(value) / CGFloat(total)) * 2 * .pi
+            let endAngle = startAngle + CGFloat(value / total) * 2 * .pi
             let path = UIBezierPath()
-            path.move(to: self.center)
-            path.addArc(withCenter: self.center, radius: self.bounds.width / 2, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+            path.move(to: center)
+            path.addArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
             path.close()
             
-            let layer = CAShapeLayer()
-            layer.path = path.cgPath
-            layer.fillColor = graphColor.cgColor
-            self.layer.addSublayer(layer)
+            let sliceLayer = CAShapeLayer()
+            sliceLayer.path = path.cgPath
+            sliceLayer.fillColor = graphColor.cgColor
+            self.layer.addSublayer(sliceLayer)
             
             if showDataLabels {
-                let midAngle = (startAngle + endAngle) / 2
-                let x = self.center.x + cos(midAngle) * (self.bounds.width / 2 - 20)
-                let y = self.center.y + sin(midAngle) * (self.bounds.width / 2 - 20)
-                
-                let label = UILabel(frame: CGRect(x: x - 20, y: y - 10, width: 40, height: 20))
+                let label = UILabel(frame: CGRect(x: center.x + radius * cos((startAngle + endAngle) / 2) - 20, y: center.y + radius * sin((startAngle + endAngle) / 2) - 10, width: 40, height: 20))
                 label.text = String(format: "%.1f", value)
                 label.textColor = .black
                 label.font = layout.axisLabelFont
@@ -316,12 +287,19 @@ public class GraphView: UIView {
     private func drawGrid() {
         let gridLayer = CAShapeLayer()
         let path = UIBezierPath()
-        let step = (self.bounds.height - layout.margin * 2) / 5
+        let maxWidth = self.bounds.width - layout.margin * 2
+        let maxHeight = self.bounds.height - layout.margin * 2
         
-        for i in 0...5 {
-            let y = layout.margin + CGFloat(i) * step
+        for i in 1...4 {
+            let y = layout.margin + CGFloat(i) * maxHeight / 5
             path.move(to: CGPoint(x: layout.margin, y: y))
             path.addLine(to: CGPoint(x: self.bounds.width - layout.margin, y: y))
+        }
+        
+        for i in 1...4 {
+            let x = layout.margin + CGFloat(i) * maxWidth / 5
+            path.move(to: CGPoint(x: x, y: layout.margin))
+            path.addLine(to: CGPoint(x: x, y: self.bounds.height - layout.margin))
         }
         
         gridLayer.path = path.cgPath
@@ -331,67 +309,53 @@ public class GraphView: UIView {
     }
     
     private func addTitle(_ title: String) {
-        let titleLabel = UILabel(frame: CGRect(x: 0, y: 0, width: self.bounds.width, height: 30))
+        let titleLabel = UILabel(frame: CGRect(x: 0, y: 0, width: self.bounds.width, height: 40))
         titleLabel.text = title
         titleLabel.textColor = .black
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 16)
+        titleLabel.font = .boldSystemFont(ofSize: 16)
         titleLabel.textAlignment = .center
         titleLabel.center = CGPoint(x: self.bounds.width / 2, y: 20)
         self.addSubview(titleLabel)
     }
     
     private func addLegend() {
-        guard let legendTitle = legendTitle else { return }
-        let legendLabel = UILabel(frame: CGRect(x: legendPosition.x, y: legendPosition.y, width: 200, height: 20))
+        let legendLabel = UILabel(frame: CGRect(x: legendPosition.x, y: legendPosition.y, width: 100, height: 50))
         legendLabel.text = legendTitle
         legendLabel.textColor = .black
-        legendLabel.font = UIFont.boldSystemFont(ofSize: 14)
+        legendLabel.font = .systemFont(ofSize: 14)
         self.addSubview(legendLabel)
-        
-        for (index, label) in data.labels.enumerated() {
-            let legendEntry = UILabel(frame: CGRect(x: legendPosition.x, y: legendPosition.y + CGFloat(index * 30) + 20, width: 200, height: 20))
-            legendEntry.text = label
-            legendEntry.textColor = graphColor
-            legendEntry.font = UIFont.systemFont(ofSize: 12)
-            self.addSubview(legendEntry)
-        }
     }
     
     private func addXAxisLabels() {
-        for (index, label) in data.labels.enumerated() {
-            let xLabel = UILabel(frame: CGRect(x: layout.margin + CGFloat(index) * (layout.barWidth + layout.spacing), y: self.bounds.height - layout.margin, width: layout.barWidth, height: 20))
-            xLabel.text = label
-            xLabel.textColor = layout.xAxisLabelColor
-            xLabel.font = layout.axisLabelFont
-            xLabel.textAlignment = layout.alignment
-            self.addSubview(xLabel)
+        let xAxisLabels = data.labels
+        let totalWidth = self.bounds.width - layout.margin * 2
+        let labelSpacing = totalWidth / CGFloat(xAxisLabels.count - 1)
+        
+        for (index, label) in xAxisLabels.enumerated() {
+            let x = layout.margin + CGFloat(index) * labelSpacing
+            let xAxisLabel = UILabel(frame: CGRect(x: x - 20, y: self.bounds.height - layout.margin + 5, width: 40, height: 20))
+            xAxisLabel.text = label
+            xAxisLabel.textColor = layout.xAxisLabelColor
+            xAxisLabel.font = layout.axisLabelFont
+            xAxisLabel.textAlignment = layout.alignment
+            self.addSubview(xAxisLabel)
         }
     }
     
     private func addYAxisLabels() {
-        let step = (self.bounds.height - layout.margin * 2) / 5
-        for i in 0...5 {
-            let yLabel = UILabel(frame: CGRect(x: 0, y: self.bounds.height - CGFloat(i) * step - layout.margin, width: 40, height: 20))
-            yLabel.text = String(format: "%.1f", Double(i) * 20)
-            yLabel.textColor = layout.yAxisLabelColor
-            yLabel.font = layout.axisLabelFont
-            yLabel.textAlignment = .right
-            self.addSubview(yLabel)
+        let maxValue = data.values.max() ?? 1
+        let yAxisLabels = [0, maxValue / 4, maxValue / 2, 3 * maxValue / 4, maxValue]
+        let totalHeight = self.bounds.height - layout.margin * 2
+        let labelSpacing = totalHeight / CGFloat(yAxisLabels.count - 1)
+        
+        for (index, label) in yAxisLabels.enumerated() {
+            let y = layout.margin + CGFloat(index) * labelSpacing
+            let yAxisLabel = UILabel(frame: CGRect(x: 5, y: y - 10, width: 40, height: 20))
+            yAxisLabel.text = String(format: "%.1f", label)
+            yAxisLabel.textColor = layout.yAxisLabelColor
+            yAxisLabel.font = layout.axisLabelFont
+            yAxisLabel.textAlignment = .right
+            self.addSubview(yAxisLabel)
         }
-    }
-    
-    @objc private func showTooltip(_ sender: UITapGestureRecognizer) {
-        guard let view = sender.view as? UILabel else { return }
-        view.alpha = 1
-    }
-    
-    @objc private func highlightBar(_ sender: UITapGestureRecognizer) {
-        guard let bar = sender.view else { return }
-        bar.backgroundColor = .lightGray
-    }
-    
-    @objc private func highlightLine(_ sender: UITapGestureRecognizer) {
-        guard let layer = sender.view?.layer.sublayers?.first as? CAShapeLayer else { return }
-        layer.strokeColor = UIColor.red.cgColor
     }
 }
