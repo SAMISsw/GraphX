@@ -106,14 +106,19 @@ public struct GraphLayout {
         self.scatterPointSize = scatterPointSize
     }
 }
-
-public class GraphView: UIView {
-    public var data: GraphData
-    public var graphType: GraphType
-    public var layout: GraphLayout
-    public var animationStyle: UIView.AnimationOptions
-    public var graphBackgroundColor: UIColor
-    public var graphColor: UIColor
+struct GraphLayout {
+    public var padding: CGFloat
+    public var spacing: CGFloat
+    public var alignment: NSTextAlignment
+    public var margin: CGFloat
+    public var xAxisLabelColor: UIColor
+    public var yAxisLabelColor: UIColor
+    public var gridLineColor: UIColor
+    public var axisLabelFont: UIFont
+    public var gridLineWidth: CGFloat
+    public var barWidth: CGFloat
+    public var pieLabelFont: UIFont
+    public var pieLabelColor: UIColor
     public var showLegend: Bool
     public var showLabels: Bool
     public var showGrid: Bool
@@ -136,14 +141,67 @@ public class GraphView: UIView {
     public var animationDuration: TimeInterval
     public var showDataLabels: Bool
     public var pieLabelTextSize: CGFloat
-    
-    public init(frame: CGRect, data: GraphData, graphType: GraphType = .bar, layout: GraphLayout = GraphLayout(), animationStyle: UIView.AnimationOptions = .transitionCrossDissolve, graphBackgroundColor: UIColor = .white, graphColor: UIColor = .blue, showLegend: Bool = true, showLabels: Bool = true, showGrid: Bool = false, title: String? = nil, showXAxisLabels: Bool = true, showYAxisLabels: Bool = true, showTooltips: Bool = true, highlightOnTouch: Bool = true, animateOnLoad: Bool = true, showLegendTitle: Bool = false, legendTitle: String? = nil, tooltipBackgroundColor: UIColor = .black, legendPosition: CGPoint = CGPoint(x: 0, y: 0), axisLineWidth: CGFloat = 1, axisLineColor: UIColor = .black, enableZoom: Bool = false, borderColor: UIColor = .clear, borderWidth: CGFloat = 0, gradientColors: [UIColor]? = nil, animationDuration: TimeInterval = 1.0, showDataLabels: Bool = true, pieLabelTextSize: CGFloat = 12) {
-        self.data = data
-        self.graphType = graphType
-        self.layout = layout
-        self.animationStyle = animationStyle
-        self.graphBackgroundColor = graphBackgroundColor
-         self.graphColor = graphColor
+    public var radarLineWidth: CGFloat
+    public var bubbleSizeRange: (min: CGFloat, max: CGFloat)
+    public var doughnutInnerRadius: CGFloat
+    public var waterfallColors: [UIColor]
+    public var boxPlotColors: [UIColor]
+    public var scatterPointSize: CGFloat
+
+    public init(
+        padding: CGFloat = 16,
+        spacing: CGFloat = 8,
+        alignment: NSTextAlignment = .center,
+        margin: CGFloat = 10,
+        xAxisLabelColor: UIColor = .black,
+        yAxisLabelColor: UIColor = .black,
+        gridLineColor: UIColor = .lightGray,
+        axisLabelFont: UIFont = .systemFont(ofSize: 12),
+        gridLineWidth: CGFloat = 0.5,
+        barWidth: CGFloat = 30,
+        pieLabelFont: UIFont = .systemFont(ofSize: 12),
+        pieLabelColor: UIColor = .black,
+        showLegend: Bool = true,
+        showLabels: Bool = true,
+        showGrid: Bool = false,
+        title: String? = nil,
+        showXAxisLabels: Bool = true,
+        showYAxisLabels: Bool = true,
+        showTooltips: Bool = true,
+        highlightOnTouch: Bool = true,
+        animateOnLoad: Bool = true,
+        showLegendTitle: Bool = false,
+        legendTitle: String? = nil,
+        tooltipBackgroundColor: UIColor = .black,
+        legendPosition: CGPoint = CGPoint(x: 0, y: 0),
+        axisLineWidth: CGFloat = 1,
+        axisLineColor: UIColor = .black,
+        enableZoom: Bool = false,
+        borderColor: UIColor = .clear,
+        borderWidth: CGFloat = 0,
+        gradientColors: [UIColor]? = nil,
+        animationDuration: TimeInterval = 1.0,
+        showDataLabels: Bool = true,
+        pieLabelTextSize: CGFloat = 12,
+        radarLineWidth: CGFloat = 2,
+        bubbleSizeRange: (min: CGFloat, max: CGFloat) = (5, 20),
+        doughnutInnerRadius: CGFloat = 0.3,
+        waterfallColors: [UIColor] = [.blue, .red],
+        boxPlotColors: [UIColor] = [.lightGray, .darkGray],
+        scatterPointSize: CGFloat = 5
+    ) {
+        self.padding = padding
+        self.spacing = spacing
+        self.alignment = alignment
+        self.margin = margin
+        self.xAxisLabelColor = xAxisLabelColor
+        self.yAxisLabelColor = yAxisLabelColor
+        self.gridLineColor = gridLineColor
+        self.axisLabelFont = axisLabelFont
+        self.gridLineWidth = gridLineWidth
+        self.barWidth = barWidth
+        self.pieLabelFont = pieLabelFont
+        self.pieLabelColor = pieLabelColor
         self.showLegend = showLegend
         self.showLabels = showLabels
         self.showGrid = showGrid
@@ -166,9 +224,14 @@ public class GraphView: UIView {
         self.animationDuration = animationDuration
         self.showDataLabels = showDataLabels
         self.pieLabelTextSize = pieLabelTextSize
-        super.init(frame: frame)
-        self.backgroundColor = graphBackgroundColor
+        self.radarLineWidth = radarLineWidth
+        self.bubbleSizeRange = bubbleSizeRange
+        self.doughnutInnerRadius = doughnutInnerRadius
+        self.waterfallColors = waterfallColors
+        self.boxPlotColors = boxPlotColors
+        self.scatterPointSize = scatterPointSize
     }
+}
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
