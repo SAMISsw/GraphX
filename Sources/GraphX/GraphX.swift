@@ -622,4 +622,3 @@ struct GraphLayout {
         titleLabel.textAlignment = .center
         self.addSubview(titleLabel)
     }
-}
